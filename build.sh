@@ -11,15 +11,25 @@ echo "2. إنشاء مجلد محلي للاعتماديات (deps)..."
 mkdir -p deps
 
 echo "3. تحميل وتثبيت Google Chrome و ChromeDriver في المجلد المحلي..."
-# هذا السكربت مقتبس من مستودعات Render الرسمية للتعامل مع نظام الملفات للقراءة فقط
-# تحديد أحدث إصدار متوافق من Chrome
-CHROME_VERSION=$(curl -sS https://google-chrome-for-testing.appspot.com/latest-patch-versions-per-build | grep -E "125.0.6422" | cut -d'.' -f1-4)
-# تحديد رابط تحميل ChromeDriver المطابق
-CHROME_DRIVER_VERSION=$(curl -sS https://google-chrome-for-testing.appspot.com/latest-patch-versions-per-build-with-downloads | grep -A 5 "chromedriver" | grep "${CHROME_VERSION}" -A 4 | grep "linux64" -A 3 | grep "url" | cut -d'"' -f4)
+# نستخدم نقطة نهاية JSON الجديدة للحصول على أحدث إصدارات Chrome المستقرة
+JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+
+echo "جلب أحدث روابط التحميل من $JSON_URL"
+
+# جلب بيانات JSON مرة واحدة وتخزينها
+JSON_DATA=$(curl -sS "$JSON_URL")
+
+# استخراج روابط التحميل لـ Chrome و ChromeDriver لمنصة linux64
+# نفترض أن jq مثبت في بيئة البناء
+CHROME_URL=$(echo "$JSON_DATA" | jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url')
+CHROME_DRIVER_URL=$(echo "$JSON_DATA" | jq -r '.channels.Stable.downloads.chromedriver[] | select(.platform=="linux64") | .url')
 
 # تحميل ملفات Chrome و ChromeDriver المضغوطة
-wget -N https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROME_VERSION}/linux64/chrome-linux64.zip -P ./deps
-wget -N ${CHROME_DRIVER_VERSION} -P ./deps
+echo "تحميل Chrome من: $CHROME_URL"
+wget -N "$CHROME_URL" -O ./deps/chrome-linux64.zip
+
+echo "تحميل ChromeDriver من: $CHROME_DRIVER_URL"
+wget -N "$CHROME_DRIVER_URL" -O ./deps/chromedriver-linux64.zip
 
 # فك ضغط الملفات في المجلد المحلي
 unzip ./deps/chrome-linux64.zip -d ./deps
