@@ -10,7 +10,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 # --- إعدادات الاختبار (تبقى كما هي) ---
 TARGET_URL = "https://menhel-ndb-2.online"
 USERNAME = "33772020"
-PASSWORD_START = 500
+PASSWORD_START = 5000
 PASSWORD_END = 9999
 ERROR_MESSAGE = "خطأ في تسجيل الدخول" 
 
